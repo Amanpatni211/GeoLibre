@@ -25,6 +25,11 @@ hide:
   </div>
   <div class="hero__media">
     <figure>
+      <a href="https://assets.geolibre.app/demos/geolibre-promo-silent.webm" title="Play the GeoLibre promo video">
+        <img src="https://assets.geolibre.app/demos/geolibre-promo-silent-640.gif" alt="GeoLibre promo video">
+      </a>
+    </figure>
+    <figure>
       <a href="https://share.geolibre.app/giswqs/3d-tiles" title="Open the 3D Tiles map">
         <img src="https://assets.geolibre.app/images/GeoLibre-demo.webp" alt="GeoLibre map interface showing the GIS workspace">
       </a>
