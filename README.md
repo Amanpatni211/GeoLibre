@@ -45,7 +45,7 @@ capabilities, credentials, and current compatibility.
 - **[Features](https://geolibre.app/features/)** — the complete feature list
 - **[Rendering engines](https://geolibre.app/user-guide/rendering-engines/)** — compare MapLibre, Mapbox, Cesium, and ArcGIS and learn how to switch or combine them.
 
-[![GeoLibre promo videos](https://assets.geolibre.app/demos/geolibre-promo-silent-640.gif)](https://assets.geolibre.app/demos/geolibre-promo-silent.webm)
+<a href="https://assets.geolibre.app/demos/geolibre-promo-silent.webm"><img src="https://assets.geolibre.app/demos/geolibre-promo-silent-640.gif" alt="GeoLibre promo video" width="100%"></a>
 
 ## Demos
 
