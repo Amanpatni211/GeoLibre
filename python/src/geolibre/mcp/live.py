@@ -284,19 +284,22 @@ def _http_error(error: urllib.error.HTTPError) -> str:
 
 def _windows_pid_alive(pid: int) -> bool:
     # os.kill(pid, 0) is not an existence probe on Windows: signal 0 is
-    # CTRL_C_EVENT, sent through GenerateConsoleCtrlEvent.
+    # CTRL_C_EVENT, sent through GenerateConsoleCtrlEvent. Waiting on the
+    # process handle avoids mistaking an exit code of 259 for STILL_ACTIVE.
     import ctypes
 
-    process_query_limited_information = 0x1000
-    still_active = 259
+    synchronize = 0x00100000
+    wait_timeout = 0x00000102
     kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
-    handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+    kernel32.OpenProcess.argtypes = (ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong)
+    kernel32.OpenProcess.restype = ctypes.c_void_p
+    kernel32.WaitForSingleObject.argtypes = (ctypes.c_void_p, ctypes.c_ulong)
+    kernel32.WaitForSingleObject.restype = ctypes.c_ulong
+    kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
+    handle = kernel32.OpenProcess(synchronize, False, pid)
     if not handle:
         return False
     try:
-        exit_code = ctypes.c_ulong()
-        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
-            return False
-        return exit_code.value == still_active
+        return kernel32.WaitForSingleObject(handle, 0) == wait_timeout
     finally:
         kernel32.CloseHandle(handle)
