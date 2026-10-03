@@ -72,7 +72,7 @@ class Relay:
         self.base_url = base_url.rstrip("/")
         self.token = token
         self.host = parsed.hostname or ""
-        self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        self.port = parsed.port or 80
 
     @property
     def redacted_url(self) -> str:
@@ -128,7 +128,9 @@ class Relay:
             headers=headers,
             method=method,
         )
-        opener = urllib.request.build_opener(_RefuseRedirects)
+        # An empty ProxyHandler stops HTTP_PROXY from routing the token
+        # through a proxy instead of straight to the loopback relay.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _RefuseRedirects)
         try:
             with opener.open(request, timeout=timeout) as response:
                 payload = json.loads(response.read().decode("utf-8"))
@@ -178,10 +180,7 @@ def discover() -> Relay | None:
 
 def require() -> Relay:
     """Return the desktop relay, or raise a message the user can act on."""
-    try:
-        relay = discover()
-    except LiveError:
-        raise
+    relay = discover()
     if relay is None:
         raise LiveError(NOT_CONNECTED)
     return relay
@@ -257,6 +256,8 @@ def _loopback_host(url: str) -> bool:
 
 
 def _pid_alive(pid: int) -> bool:
+    if os.name == "nt":
+        return _windows_pid_alive(pid)
     try:
         os.kill(pid, 0)
     except OSError:
@@ -279,3 +280,23 @@ def _http_error(error: urllib.error.HTTPError) -> str:
     if detail:
         return f"GeoLibre relay returned HTTP {error.code} ({detail})."
     return f"GeoLibre relay returned HTTP {error.code}."
+
+
+def _windows_pid_alive(pid: int) -> bool:
+    # os.kill(pid, 0) is not an existence probe on Windows: signal 0 is
+    # CTRL_C_EVENT, sent through GenerateConsoleCtrlEvent.
+    import ctypes
+
+    process_query_limited_information = 0x1000
+    still_active = 259
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+    if not handle:
+        return False
+    try:
+        exit_code = ctypes.c_ulong()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return False
+        return exit_code.value == still_active
+    finally:
+        kernel32.CloseHandle(handle)

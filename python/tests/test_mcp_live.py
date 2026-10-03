@@ -156,3 +156,30 @@ def test_live_fly_to_tool_reports_a_missing_window(tmp_path, monkeypatch):
     server = build_server(Workspace([tmp_path]))
     with pytest.raises(ToolError, match="Jupyter Notebook"):
         asyncio.run(server.call_tool("live_fly_to", {"lng": 72.5, "lat": 23.0, "zoom": 11}))
+
+
+def test_environment_proxy_is_bypassed(relay_server, monkeypatch):
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:9")
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9")
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.setenv("GEOLIBRE_RELAY_URL", f"http://127.0.0.1:{relay_server.port}")
+    monkeypatch.setenv("GEOLIBRE_RELAY_TOKEN", "secret")
+    assert require().call("listLayers") == "layer-1"
+    assert relay_server.authorization == "token secret"
+
+
+def test_live_set_opacity_rejects_out_of_range_values(tmp_path, monkeypatch):
+    pytest.importorskip("mcp", reason="the mcp SDK is an optional extra")
+    import asyncio
+
+    from mcp.server.mcpserver.exceptions import ToolError
+
+    from geolibre.mcp.server import build_server
+    from geolibre.mcp.workspace import Workspace
+
+    monkeypatch.delenv("GEOLIBRE_RELAY_URL", raising=False)
+    monkeypatch.setattr("geolibre.mcp.live.runtime_directories", lambda: [tmp_path])
+    server = build_server(Workspace([tmp_path]))
+    with pytest.raises(ToolError, match="between 0 and 1"):
+        asyncio.run(server.call_tool("live_set_opacity", {"layer_id": "a", "opacity": 1.5}))

@@ -1667,8 +1667,11 @@ def build_server(workspace: Workspace) -> MCPServer:
         Returns:
             The layer id and the opacity that was sent.
         """
-        live.require().call("setOpacity", {"layerId": layer_id, "opacity": float(opacity)})
-        return {"layerId": layer_id, "opacity": float(opacity)}
+        opacity = float(opacity)
+        if not 0 <= opacity <= 1:
+            raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
+        live.require().call("setOpacity", {"layerId": layer_id, "opacity": opacity})
+        return {"layerId": layer_id, "opacity": opacity}
 
     @tool()
     def live_set_style(layer_id: str, style: dict[str, Any]) -> dict[str, Any]:
